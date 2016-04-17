@@ -12,7 +12,8 @@
 
 
 
-//g++ -std=c++11 -pthread Attempt0_3.cpp -ldl -o Attempt0_3
+//g++ -std=c++11 -pthread Attempt0_4.cpp -ldl -o Attempt0_4 -lboost_iostreams -lboost_system -lboost_filesystem
+
 
 //#define ROBOT_IS_PLUGGED_IN true
 
@@ -32,6 +33,9 @@
 
 //threading
 #include <pthread.h>
+
+//graphing
+#include "projection.h"
 
 
 //#include <math.h>       /* sqrt */
@@ -72,6 +76,15 @@ int main(int argc, char ** argv)
 {
    	//initialize everything
    	
+   	Gnuplot gp;
+   	///graphing setup
+	srand (static_cast <unsigned> (time(0)));
+	double Xcurrent, Ycurrent, Xgoal, Ygoal, Xdelta, Ydelta;
+	Xcurrent = Ycurrent = Xdelta = Ydelta = 0;
+		
+	Xgoal = 0.1;
+	Ygoal = 0.5;
+   	graph ( gp, 0, 0, Xgoal, Ygoal, 0, 0);
    	
    	// Register signal and signal handler
    	signal(SIGINT, signal_handler);
@@ -97,7 +110,8 @@ int main(int argc, char ** argv)
 	// I will want to input this file name as argv[1]. See the following file for code:
 	//  /home/aspelun1/Documents/Testing_functions/initializeMatrixFromTextFile/initializeMatrix.cpp
 	
-	float maxSpeed = 0.01f;
+	float maxSpeed = 0.1f;
+	
 	
 	
 	
@@ -203,9 +217,9 @@ int main(int argc, char ** argv)
 		
 		
 		//This is the starting position
-		pointToSend.Position.CartesianPosition.X = -0.12f;
+		pointToSend.Position.CartesianPosition.X = -Xgoal;
 		pointToSend.Position.CartesianPosition.Y = -0.46f;
-		pointToSend.Position.CartesianPosition.Z = 0.500f;
+		pointToSend.Position.CartesianPosition.Z = Ygoal;
 		pointToSend.Position.CartesianPosition.ThetaX = PI/2;
 		pointToSend.Position.CartesianPosition.ThetaY = 0.0f;
 		pointToSend.Position.CartesianPosition.ThetaZ = PI;
@@ -365,6 +379,7 @@ int main(int argc, char ** argv)
 	
 	
 	float xVel, zVel, magnitude;
+	magnitude = 1.0;
 	
 	// loop everything:
 	// get current position (takes ~3 milliseconds....) !
@@ -376,7 +391,11 @@ int main(int argc, char ** argv)
 	while(keepGoing) //errors should break out of the loop and set keepGoing to false for the reader thread
    	{
 		result = (*MyGetCartesianPosition)(data); //about 2ms
-		// Use these to get current position: data.Coordinates.X and data.Coordinates.Z;
+		
+		//graph ( gp, Xcurrent, Ycurrent, Xgoal, Ygoal, Xdelta, Ydelta);
+		graph ( gp, -1.0*data.Coordinates.X, data.Coordinates.Z, Xgoal, Ygoal, -0.0625*xVel/magnitude, 0.0625*zVel/magnitude);
+		
+		
 		
 		
 		xVel = zVel = 0.0;
@@ -389,7 +408,7 @@ int main(int argc, char ** argv)
 		}
 		
 		magnitude = sqrt(xVel*xVel + zVel*zVel);
-		if ( magnitude < .01)
+		if ( magnitude < .1)
 		{
 			pointToSend.Position.CartesianPosition.X = 0.0f; //these values are the result of the matrix
 			pointToSend.Position.CartesianPosition.Z = 0.0f;
