@@ -316,7 +316,7 @@ int main(int argc, char ** argv)
 	
 	for (int device_iter = 0; device_iter< NUMBER_OF_IMUS ; device_iter++)
 	{
-		result = setStreamingTiming(fd_, device_iter, 500000, TSS_INFINITE_DURATION, 0); // the function may take pointers  ?
+		result = setStreamingTiming(fd_, device_iter, 1000000/100, TSS_INFINITE_DURATION, 0); // (microseconds/second) / (cycles/second) = (microseconds/cycle)
 		if ( result < 0 ) 
 		{
 			printf ("Unable to set streaming timing for IMU #%d, error: %d\n", device_iter, result);
@@ -401,7 +401,7 @@ int main(int argc, char ** argv)
 	
 	
 	float xVel, zVel, magnitude;
-	magnitude = 1.0;
+	xVel = zVel = magnitude = 1.0;
 	
 	
 
