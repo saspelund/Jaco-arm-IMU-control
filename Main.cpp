@@ -12,7 +12,7 @@
 
 
 
-//g++ -std=c++11 -pthread Attempt0_4.cpp -ldl -o Attempt0_4 -lboost_iostreams -lboost_system -lboost_filesystem
+//g++ -std=c++11 -pthread Attempt0_4_1.cpp -ldl -o Attempt0_4_1 -lboost_iostreams -lboost_system -lboost_filesystem
 
 
 //#define ROBOT_IS_PLUGGED_IN true
@@ -408,6 +408,7 @@ int main(int argc, char ** argv)
 		}
 		
 		magnitude = sqrt(xVel*xVel + zVel*zVel);
+		printf("mag: %7.4f\t", magnitude);
 		if ( magnitude < .1)
 		{
 			pointToSend.Position.CartesianPosition.X = 0.0f; //these values are the result of the matrix
