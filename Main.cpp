@@ -12,7 +12,7 @@
 
 
 
-//g++ -std=c++11 -pthread Attempt0_4_1.cpp -ldl -o Attempt0_4_1 -lboost_iostreams -lboost_system -lboost_filesystem
+//g++ -std=c++11 -pthread Attempt0_4.cpp -ldl -o Attempt0_4 -lboost_iostreams -lboost_system -lboost_filesystem
 
 
 //#define ROBOT_IS_PLUGGED_IN true
@@ -35,7 +35,7 @@
 #include <pthread.h>
 
 //graphing
-#include "projection.h"
+#include "projection2.h"
 
 
 //#include <math.h>       /* sqrt */
@@ -84,20 +84,42 @@ int main(int argc, char ** argv)
 		
 	Xgoal = 0.1;
 	Ygoal = 0.5;
-   	graph ( gp, 0, 0, Xgoal, Ygoal, 0, 0);
+	
+	struct timeval startOfProgramTime, startOfCurrentGoalTime;
+	gettimeofday(&startOfProgramTime, NULL);
+	
+   	
    	
    	// Register signal and signal handler
    	signal(SIGINT, signal_handler);
-
+	
+	std::string ofilename;
+    std::cout << "please enter desired output data file name: \n";
+    std::getline(std::cin, ofilename);
+	std::ofstream outputFile ( ofilename , std::ios::app);
+	
+	if (outputFile.is_open())
+	{
+		outputFile << "GoalTime\tXcurrent\tYcurrent\tXvel\tYvel" << "\n";
+	}
+		
+	graph ( gp, 0, 0, Xgoal, Ygoal, 0, 0, outputFile, startOfProgramTime, startOfCurrentGoalTime);
+	
+	//Time_Stamp(ofilename);
+	
 	int result; //used for error checking
 	
 	//store the orientation values of the IMUs
 	//orientation orient[NUMBER_OF_IMUS];
 	
 	//Read in Matrix from a file or I guess we can just hard code it for now
+	std::string ifilename;
+    std::cout << "please enter name of file containing matrix: \n";
+    std::getline(std::cin, ifilename);
+	
 	double multMatrix[2][8];
 	
-	std::ifstream infile("Sanders_matrix.txt");
+	std::ifstream infile(ifilename);
 	
 	//double value;
 	for (int col = 0; col <8; col ++)
@@ -381,6 +403,10 @@ int main(int argc, char ** argv)
 	float xVel, zVel, magnitude;
 	magnitude = 1.0;
 	
+	
+
+
+
 	// loop everything:
 	// get current position (takes ~3 milliseconds....) !
 	// graph the initial points (this can do the dist(goal,current) checking)
@@ -392,8 +418,9 @@ int main(int argc, char ** argv)
    	{
 		result = (*MyGetCartesianPosition)(data); //about 2ms
 		
-		//graph ( gp, Xcurrent, Ycurrent, Xgoal, Ygoal, Xdelta, Ydelta);
-		graph ( gp, -1.0*data.Coordinates.X, data.Coordinates.Z, Xgoal, Ygoal, -0.0625*xVel/magnitude, 0.0625*zVel/magnitude);
+		//graph ( gp, Xcurrent, Ycurrent, Xgoal, Ygoal, Xdelta, Ydelta,outputFile, startOfProgramTime, startOfCurrentGoalTime);
+		graph ( gp, -1.0*data.Coordinates.X, data.Coordinates.Z, Xgoal, Ygoal, -0.0625*xVel/magnitude, 0.0625*zVel/magnitude,
+				outputFile, startOfProgramTime, startOfCurrentGoalTime);
 		
 		
 		
@@ -408,18 +435,17 @@ int main(int argc, char ** argv)
 		}
 		
 		magnitude = sqrt(xVel*xVel + zVel*zVel);
-		printf("mag: %7.4f\t", magnitude);
 		if ( magnitude < .1)
 		{
 			pointToSend.Position.CartesianPosition.X = 0.0f; //these values are the result of the matrix
 			pointToSend.Position.CartesianPosition.Z = 0.0f;
-			printf("xVel: %7.4f\tzVel: %7.4f but sending 0s\n", xVel, zVel);
+			//printf("xVel: %7.4f\tzVel: %7.4f but sending 0s\n", xVel, zVel);
 		}
 		else
 		{
 			pointToSend.Position.CartesianPosition.X = xVel/magnitude*maxSpeed; // /640.0; //these values are the result of the matrix
 			pointToSend.Position.CartesianPosition.Z = zVel/magnitude*maxSpeed; // /384.0;
-			printf("xVel: %7.4f\tzVel: %7.4f\n", xVel/magnitude*maxSpeed, zVel/magnitude*maxSpeed);
+			//printf("xVel: %7.4f\tzVel: %7.4f\n", xVel/magnitude*maxSpeed, zVel/magnitude*maxSpeed);
 		}
 		
 		
@@ -472,7 +498,7 @@ int main(int argc, char ** argv)
 	printf ("Device closed. fd_: %d\n",fd_);
 	
 	
-	
+	gp << "quit" << std::endl;
 	
 	
 	printf ("Exiting program\n");

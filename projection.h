@@ -4,11 +4,12 @@
 #include <iostream>
 #include "gnuplot-iostream.h"
 #include <stdlib.h>
-#include <time.h>
+#include <sys/time.h>
 #include <string>
 #include <stdio.h>
 #include <fstream>
 #include <chrono>
+#include <unistd.h>
 
 //these values get to be played with as the graphs resizes according to its limits
 #define X_GRAPH_MIN 0.08
@@ -22,19 +23,41 @@
 #define Y_ROBOT_MAX 0.62
 
 
-void graph ( Gnuplot &gp, double Xcurrent, double Ycurrent, double & Xgoal, double & Ygoal, double Xdelta, double Ydelta)
-
+void graph ( Gnuplot &gp, 
+			double Xcurrent, double Ycurrent, double & Xgoal, double & Ygoal, double Xdelta, double Ydelta,
+			std::ofstream &outputFile, timeval startOfProgramTime, timeval startOfCurrentGoalTime)
 {
+	struct timeval currentTime;
+	float deltaTime; 
+	
+	
+	deltaTime  = (currentTime.tv_sec - startOfCurrentGoalTime.tv_sec)*1.0 + (currentTime.tv_usec - startOfCurrentGoalTime.tv_usec)/1000000.0;
+	if (outputFile.is_open())
+	{
+		outputFile << deltaTime << "\t" << Xcurrent << "\t" << Ycurrent << "\t"<<  Xdelta << "\t" << Ydelta << "\n";
+	}
+	
 	
 	if(pow(double ((Xcurrent-Xgoal)*(Xcurrent-Xgoal) + (Ycurrent-Ygoal)*(Ycurrent-Ygoal)), (0.5))<=0.025 )
     {
+		//struct timeval currentTime;
 		do{
 			Xgoal = X_ROBOT_MIN+ ( rand() % (int)( (X_ROBOT_MAX - X_ROBOT_MIN - 0.02)*100.0 ) )/100.0;
 			Ygoal = Y_ROBOT_MIN+ ( rand() % (int)( (Y_ROBOT_MAX - Y_ROBOT_MIN - 0.02)*100.0 ) )/100.0;
 		}while( (Xgoal*Xgoal + Ygoal*Ygoal) > 0.75); //make sure the goal isn't out of reach
 		
+		gettimeofday(&currentTime, NULL);
+		gettimeofday(&startOfCurrentGoalTime, NULL);
+		//float deltaTime;    
+   
+    	deltaTime  = currentTime.tv_sec*1.0  - startOfProgramTime.tv_sec*1.0 + (currentTime.tv_usec - startOfProgramTime.tv_usec)/1000000.0;
+    	
+
+		if (outputFile.is_open())
+		{
+			outputFile << "\n\n" << "TimeSinceProgStart\tXgoagl\tYgoal\n" << deltaTime << "\t" << Xgoal << "\t" << Ygoal << "\n";
+		}
 		
-		printf("Xgoal,Ygoal: %.4f,%.4f\n",Xgoal,Ygoal);
 	}
 	
 	std::vector<std::pair<double, double> > goalPoint;
@@ -61,8 +84,9 @@ void graph ( Gnuplot &gp, double Xcurrent, double Ycurrent, double & Xgoal, doub
 	return;
 }
 
-
-void Data_Write( std::string filename, float begin, float T, double x, double y, double X, double Y, double A, double B) 
+/*
+void Data_Write( std::string filename, float & startOfProgramTime, float startOfGoalTime, 
+					double Xcurrent, double Ycurrent, double X, double Y, double A, double B) 
 
 {
 
@@ -101,7 +125,26 @@ void Time_Stamp(std::string filename)
   		}
   
   	else std::cout << "Unable to open file";
-  
+
+/*
+	struct timeval start, end;
+
+    long mtime, seconds, useconds;    
+
+    gettimeofday(&start, NULL);
+    usleep(2000);
+    gettimeofday(&end, NULL);
+
+    seconds  = end.tv_sec  - start.tv_sec;
+    useconds = end.tv_usec - start.tv_usec;
+
+    mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
+
+    printf("Elapsed time: %ld milliseconds\n", mtime);
+
+    return 0;
+//* /		
+		
 }
 
 
@@ -118,9 +161,9 @@ int main()
 	Time_Stamp(filename);
 
  
-	std::clock_t    start;
-	std::clock_t    Begin;
-	std::clock_t    t1;
+	std::clock_t    start; //Time elapsed since last goal
+	std::clock_t    Begin; //Time since session began
+	std::clock_t    t1; //
   
 
 	start = std::clock();
