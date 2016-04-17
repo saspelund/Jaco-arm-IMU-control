@@ -12,9 +12,9 @@
 
 
 
-//g++ -std=c++11 -pthread Attempt0_1.cpp -ldl -o Attempt0_1
+//g++ -std=c++11 -pthread Attempt0_3.cpp -ldl -o Attempt0_3
 
-#define ROBOT_IS_PLUGGED_IN true
+//#define ROBOT_IS_PLUGGED_IN true
 
 #include <unistd.h>
 #include <stdio.h>
@@ -33,6 +33,8 @@
 //threading
 #include <pthread.h>
 
+
+//#include <math.h>       /* sqrt */
 
 #define NUMBER_OF_IMUS 4
 #define PI 3.14159265359
@@ -95,81 +97,9 @@ int main(int argc, char ** argv)
 	// I will want to input this file name as argv[1]. See the following file for code:
 	//  /home/aspelun1/Documents/Testing_functions/initializeMatrixFromTextFile/initializeMatrix.cpp
 	
+	float maxSpeed = 0.01f;
 	
 	
-	
-	//initialize IMUs
-	//int fd_; // file handle for dongle stream must be done globally
-	
-	fd_ = openDevice();
-	if (( fd_ ) < 0 ) 
-	{
-		printf ("Unable to open file");
-		return 1;
-	}
-	printf("fd_ = %d\n",fd_);
-	
-	result = updateCurrentTimestamp(fd_, 0);
-	if ( result < 0 ) 
-	{
-		printf ("Unable to update current timestamp, error: %d\n", result);
-		return 1;
-	}
-	printf ("Current timestamp updated\n");
-	
-	const TSS_Stream_Command stream_slots[8] = {TSS_GET_TARED_ORIENTATION_AS_EULER_ANGLES,
-                                      TSS_NULL,//GET_BATTERY_PERCENT_REMAINING might be something to include
-                                      TSS_NULL,
-									  TSS_NULL,
-									  TSS_NULL,
-									  TSS_NULL,
-									  TSS_NULL,
-									  TSS_NULL};
-	
-	for (int device_iter = 0; device_iter< NUMBER_OF_IMUS ; device_iter++)
-	{
-		result = setStreamingTiming(fd_, device_iter, 500000, TSS_INFINITE_DURATION, 0); // the function may take pointers  ?
-		if ( result < 0 ) 
-		{
-			printf ("Unable to set streaming timing for IMU #%d, error: %d\n", device_iter, result);
-			return 1;
-		}
-		printf ("Streaming timing set for IMU #%d\n", device_iter);
-		
-		result = setStreamingSlots(fd_, device_iter, stream_slots);
-		if ( result < 0 ) 
-		{
-			printf ("Unable to set streaming slots for IMU #%d, error: %d\n", device_iter, result);
-			return 1;
-		}
-		printf ("Streaming slots set for IMU #%d\n", device_iter);
-		
-	/*	result = setStreamingHeader(fd_, device_iter);
-		if ( result < 0 ) 
-		{
-			printf ("Unable to set streaming header for IMU #%d\n", device_iter);
-			return 1;
-		}
-		printf ("Streaming header set for IMU #%d, error: %d\n", device_iter, result);
-	*/	
-		
-		result = tareWithCurrentOrientation(fd_, device_iter);
-		if ( result < 0 ) 
-		{
-			printf ("Unable to tare orientation of IMU #%d, error: %d\n", device_iter, result);
-			return 1;
-		}
-		printf ("Orientation tared for IMU #%d\n", device_iter);
-	}
-/*	
-	result = broadcastSynchronizationPulse(fd_);
-	if ( result < 0 ) 
-	{
-		printf ("Unable to broadcast synchronization pulse, error: %d\n", result);
-		return 1;
-	}
-	printf ("Synchronization pulse broadcasted\n");
-*/	
 	
 	//Initialize Kinova Arm API ONLY VELOCITY CONTROL SO FAR STILL NEED CARTESIAN POSITION AND ORIGINAL LOCATION
 	
@@ -252,7 +182,7 @@ int main(int argc, char ** argv)
 	
 	if(canExecuteProgram)
 	{
-		(*MyMoveHome)();
+		(*MyMoveHome)(); //can comment out this line to make the process go faster if there is a break in the IMU initialization
 		(*MyInitFingers)();
 		
 		QuickStatus status;
@@ -263,19 +193,16 @@ int main(int argc, char ** argv)
 		
 		
 		//initialize to starting position
-		
-		
-if (ROBOT_IS_PLUGGED_IN){		
-
-
-		pointToSend.Position.HandMode = POSITION_MODE; //This will be changed later on and at a later date
+		pointToSend.Position.HandMode = POSITION_MODE; 
 		pointToSend.Position.Type = CARTESIAN_POSITION;
 
 		// I don't know what these are for
 		pointToSend.LimitationsActive = 1;
-		pointToSend.Limitations.speedParameter1 = 0.08;
-		pointToSend.Limitations.speedParameter2 = 0.7;
+		pointToSend.Limitations.speedParameter1 = maxSpeed;
+		//pointToSend.Limitations.speedParameter2 = 0.7;
 		
+		
+		//This is the starting position
 		pointToSend.Position.CartesianPosition.X = -0.12f;
 		pointToSend.Position.CartesianPosition.Y = -0.46f;
 		pointToSend.Position.CartesianPosition.Z = 0.500f;
@@ -284,21 +211,27 @@ if (ROBOT_IS_PLUGGED_IN){
 		pointToSend.Position.CartesianPosition.ThetaZ = PI;
 		
 		//For some reason these values work because the status.RobotType = NULL rather than 0 for JACO
-		// If this extends fingers too far or too little, change these values to orders of magintude smaller
+		//If this extends fingers too far or too little, change these values to orders of magintude smaller
 		pointToSend.Position.Fingers.Finger1 = 6000.0f;
 		pointToSend.Position.Fingers.Finger2 = 6000.0f;
 		pointToSend.Position.Fingers.Finger3 = 0.0f;
 		
 		printf( "Sending starting position.\n");
-		(*MySendBasicTrajectory)(pointToSend);
+		result = (*MySendBasicTrajectory)(pointToSend);
 		
+		usleep(4000000);
 		
-		// set the command type to velocity controls
-		//pointToSend.Position.Type = CARTESIAN_VELOCITY;
-	
-} //endif ROBOT_IS_PLUGGED_IN
-	
-	
+		// set the command type to velocity controls and set all values to zero
+		pointToSend.Position.Type = CARTESIAN_VELOCITY;
+		pointToSend.Position.CartesianPosition.X = 0.0f;
+		pointToSend.Position.CartesianPosition.Y = 0.0f;
+		pointToSend.Position.CartesianPosition.Z = 0.0f;
+		pointToSend.Position.CartesianPosition.ThetaX = 0.0f;
+		pointToSend.Position.CartesianPosition.ThetaY = 0.0f;
+		pointToSend.Position.CartesianPosition.ThetaZ = 0.0f;
+		pointToSend.Position.Fingers.Finger1 = 0.0f;
+		pointToSend.Position.Fingers.Finger2 = 0.0f;
+		pointToSend.Position.Fingers.Finger3 = 0.0f;
 	}
 	else
 	{
@@ -307,28 +240,102 @@ if (ROBOT_IS_PLUGGED_IN){
 	}
 	
 
+
+
+
+
+
+
+
+
+
+
+	//initialize IMUs
+	//int fd_; // file handle for dongle stream must be done globally
 	
-	//FLUSH THE BUFFER
-	//there is probably a better way of doing this but what the hell!
-	// In retrospect this was a terrible idea......
-	unsigned int amt = 0;
-	unsigned char buf = '\n';
-	/*do {
-		amt = read(fd_, &buf, 1 );
-		printf("%x\n", buf);
-	} while( amt > 0);
-	*/
+	fd_ = openDevice();
+	if (( fd_ ) < 0 ) 
+	{
+		printf ("Unable to open file");
+		return 1;
+	}
+	printf("fd_ = %d\n",fd_);
 	
+	result = updateCurrentTimestamp(fd_, 0);
+	if ( result < 0 ) 
+	{
+		printf ("Unable to update current timestamp, error: %d\n", result);
+		return 1;
+	}
+	printf ("Current timestamp updated\n");
 	
+	const TSS_Stream_Command stream_slots[8] = {TSS_GET_TARED_ORIENTATION_AS_EULER_ANGLES,
+                                      TSS_NULL,//GET_BATTERY_PERCENT_REMAINING might be something to include
+                                      TSS_NULL,
+									  TSS_NULL,
+									  TSS_NULL,
+									  TSS_NULL,
+									  TSS_NULL,
+									  TSS_NULL};
 	
-	
-	
-	
-	
-	
-	
-	
-	
+	for (int device_iter = 0; device_iter< NUMBER_OF_IMUS ; device_iter++)
+	{
+		result = setStreamingTiming(fd_, device_iter, 500000, TSS_INFINITE_DURATION, 0); // the function may take pointers  ?
+		if ( result < 0 ) 
+		{
+			printf ("Unable to set streaming timing for IMU #%d, error: %d\n", device_iter, result);
+			return 1;
+		}
+		printf ("Streaming timing set for IMU #%d\n", device_iter);
+		
+		result = setStreamingSlots(fd_, device_iter, stream_slots);
+		if ( result < 0 ) 
+		{
+			printf ("Unable to set streaming slots for IMU #%d, error: %d\n", device_iter, result);
+			return 1;
+		}
+		printf ("Streaming slots set for IMU #%d\n", device_iter);
+		
+	/*	result = setStreamingHeader(fd_, device_iter);
+		if ( result < 0 ) 
+		{
+			printf ("Unable to set streaming header for IMU #%d\n", device_iter);
+			return 1;
+		}
+		printf ("Streaming header set for IMU #%d, error: %d\n", device_iter, result);
+	*/	
+		
+		result = tareWithCurrentOrientation(fd_, device_iter);
+		if ( result < 0 ) 
+		{
+			printf ("Unable to tare orientation of IMU #%d, error: %d\n", device_iter, result);
+			return 1;
+		}
+		printf ("Orientation tared for IMU #%d\n", device_iter);
+		
+		
+		result = getBatteryLevel(fd_, device_iter);
+		if ( result < 0 ) 
+		{
+			printf ("Unable to get battery level of IMU #%d, error: %d\n", device_iter, result);
+			return 1;
+		}
+		printf ("\t\t\tbattery level of IMU #%d = %d\n", device_iter, result);
+	}
+/*	
+	// I don't know if this will ever be needed
+	result = broadcastSynchronizationPulse(fd_);
+	if ( result < 0 ) 
+	{
+		printf ("Unable to broadcast synchronization pulse, error: %d\n", result);
+		return 1;
+	}
+	printf ("Synchronization pulse broadcasted\n");
+*/	
+
+
+
+	usleep(2500000); // allow the user to see the battery levels but realize that the IMUs have already been tared.
 	
 	
 	
@@ -357,7 +364,7 @@ if (ROBOT_IS_PLUGGED_IN){
 	
 	
 	
-	float xVel, zVel;
+	float xVel, zVel, magnitude;
 	
 	// loop everything:
 	// get current position (takes ~3 milliseconds....) !
@@ -372,7 +379,7 @@ if (ROBOT_IS_PLUGGED_IN){
 		// Use these to get current position: data.Coordinates.X and data.Coordinates.Z;
 		
 		
-		xVel = zVel = 0;
+		xVel = zVel = 0.0;
 		for (int i = 0; i< NUMBER_OF_IMUS; i++)
 		{
 			pthread_mutex_lock( &orient[i].mutex );
@@ -381,15 +388,30 @@ if (ROBOT_IS_PLUGGED_IN){
 			pthread_mutex_unlock( &orient[i].mutex );
 		}
 		
-		pointToSend.Position.CartesianPosition.X = xVel/640.0; //these values are the result of the matrix
-		pointToSend.Position.CartesianPosition.Z = zVel/384.0;
-		printf("xVel: %4.2f\tzVel: %4.2f\n", xVel, zVel);
-
+		magnitude = sqrt(xVel*xVel + zVel*zVel);
+		if ( magnitude < .01)
+		{
+			pointToSend.Position.CartesianPosition.X = 0.0f; //these values are the result of the matrix
+			pointToSend.Position.CartesianPosition.Z = 0.0f;
+			printf("xVel: %7.4f\tzVel: %7.4f but sending 0s\n", xVel, zVel);
+		}
+		else
+		{
+			pointToSend.Position.CartesianPosition.X = xVel/magnitude*maxSpeed; // /640.0; //these values are the result of the matrix
+			pointToSend.Position.CartesianPosition.Z = zVel/magnitude*maxSpeed; // /384.0;
+			printf("xVel: %7.4f\tzVel: %7.4f\n", xVel/magnitude*maxSpeed, zVel/magnitude*maxSpeed);
+		}
+		
+		
 		(*MySendBasicTrajectory)(pointToSend); //how long of a process is this?
 		
-		sleep(500);
+		usleep(10000); //no point going faster than 100Hz as that is how fast the Jaco arm controller refreshes
    	}
    	
+   	
+   	pointToSend.Position.CartesianPosition.X = 0; //these values are the result of the matrix
+	pointToSend.Position.CartesianPosition.Z = 0;
+	printf("xVel: 0\tzVel: 0\n");
    	
    	
    	
@@ -412,6 +434,14 @@ if (ROBOT_IS_PLUGGED_IN){
 			printf ("Unable to stop streaming for IMU #%d\n", device_iter);
 		}
 		printf ("Streaming stopped for IMU #%d\n", device_iter);
+		
+		result = getBatteryLevel(fd_, device_iter);
+		if ( result < 0 ) 
+		{
+			printf ("Unable to get battery level of IMU #%d, error: %d\n", device_iter, result);
+			return 1;
+		}
+		printf ("battery level of IMU #%d = %d\n", device_iter, result);
 	}
    	
    	result = closeDevice (fd_);
