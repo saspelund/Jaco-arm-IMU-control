@@ -10,11 +10,6 @@
 #include <string.h> //  strerror
 #include <stdexcept> // for exception, runtime_error, out_of_range
 
-
-
-//g++ -std=c++11 -pthread Main.cpp -ldl -o Kinova_Imu_control -lboost_iostreams -lboost_system -lboost_filesystem
-
-
 //#define ROBOT_IS_PLUGGED_IN true
 
 #include <unistd.h>
