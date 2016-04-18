@@ -2,7 +2,7 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
-#include "gnuplot-iostream.h"
+#include "include/gnuplot-iostream.h"
 #include <stdlib.h>
 #include <sys/time.h>
 #include <string>

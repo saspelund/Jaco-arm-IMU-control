@@ -12,7 +12,7 @@
 
 
 
-//g++ -std=c++11 -pthread Attempt0_4.cpp -ldl -o Attempt0_4 -lboost_iostreams -lboost_system -lboost_filesystem
+//g++ -std=c++11 -pthread Main.cpp -ldl -o Kinova_Imu_control -lboost_iostreams -lboost_system -lboost_filesystem
 
 
 //#define ROBOT_IS_PLUGGED_IN true
@@ -21,21 +21,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#include "yei_threespace_api4.h"
+#include "include/yei_threespace_api4.h"
 #include <fstream>
 
 //Kinova
 #include <dlfcn.h>
 #include <vector>
-#include "KinovaTypes.h"
-#include "Kinova.API.UsbCommandLayerUbuntu.h"
-#include "Kinova.API.CommLayerUbuntu.h"
+#include "include/KinovaTypes.h"
+#include "include/Kinova.API.UsbCommandLayerUbuntu.h"
+#include "include/Kinova.API.CommLayerUbuntu.h"
 
 //threading
 #include <pthread.h>
 
 //graphing
-#include "projection2.h"
+#include "projection.h"
 
 
 //#include <math.h>       /* sqrt */
