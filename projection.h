@@ -4,12 +4,11 @@
 #include <iostream>
 #include "include/gnuplot-iostream.h"
 #include <stdlib.h>
-#include <sys/time.h>
+#include <time.h>
 #include <string>
 #include <stdio.h>
 #include <fstream>
 #include <chrono>
-#include <unistd.h>
 
 //these values get to be played with as the graphs resizes according to its limits
 #define X_GRAPH_MIN 0.08
@@ -23,41 +22,19 @@
 #define Y_ROBOT_MAX 0.62
 
 
-void graph ( Gnuplot &gp, 
-			double Xcurrent, double Ycurrent, double & Xgoal, double & Ygoal, double Xdelta, double Ydelta,
-			std::ofstream &outputFile, timeval startOfProgramTime, timeval startOfCurrentGoalTime)
+void graph ( Gnuplot &gp, double Xcurrent, double Ycurrent, double & Xgoal, double & Ygoal, double Xdelta, double Ydelta)
+
 {
-	struct timeval currentTime;
-	float deltaTime; 
-	
-	
-	deltaTime  = (currentTime.tv_sec - startOfCurrentGoalTime.tv_sec)*1.0 + (currentTime.tv_usec - startOfCurrentGoalTime.tv_usec)/1000000.0;
-	if (outputFile.is_open())
-	{
-		outputFile << deltaTime << "\t" << Xcurrent << "\t" << Ycurrent << "\t"<<  Xdelta << "\t" << Ydelta << "\n";
-	}
-	
 	
 	if(pow(double ((Xcurrent-Xgoal)*(Xcurrent-Xgoal) + (Ycurrent-Ygoal)*(Ycurrent-Ygoal)), (0.5))<=0.025 )
     {
-		//struct timeval currentTime;
 		do{
 			Xgoal = X_ROBOT_MIN+ ( rand() % (int)( (X_ROBOT_MAX - X_ROBOT_MIN - 0.02)*100.0 ) )/100.0;
 			Ygoal = Y_ROBOT_MIN+ ( rand() % (int)( (Y_ROBOT_MAX - Y_ROBOT_MIN - 0.02)*100.0 ) )/100.0;
 		}while( (Xgoal*Xgoal + Ygoal*Ygoal) > 0.75); //make sure the goal isn't out of reach
 		
-		gettimeofday(&currentTime, NULL);
-		gettimeofday(&startOfCurrentGoalTime, NULL);
-		//float deltaTime;    
-   
-    	deltaTime  = currentTime.tv_sec*1.0  - startOfProgramTime.tv_sec*1.0 + (currentTime.tv_usec - startOfProgramTime.tv_usec)/1000000.0;
-    	
-
-		if (outputFile.is_open())
-		{
-			outputFile << "\n\n" << "TimeSinceProgStart\tXgoagl\tYgoal\n" << deltaTime << "\t" << Xgoal << "\t" << Ygoal << "\n";
-		}
 		
+		printf("Xgoal,Ygoal: %.4f,%.4f\n",Xgoal,Ygoal);
 	}
 	
 	std::vector<std::pair<double, double> > goalPoint;
@@ -84,9 +61,8 @@ void graph ( Gnuplot &gp,
 	return;
 }
 
-/*
-void Data_Write( std::string filename, float & startOfProgramTime, float startOfGoalTime, 
-					double Xcurrent, double Ycurrent, double X, double Y, double A, double B) 
+
+void Data_Write( std::string filename, float begin, float T, double x, double y, double X, double Y, double A, double B) 
 
 {
 
@@ -125,232 +101,6 @@ void Time_Stamp(std::string filename)
   		}
   
   	else std::cout << "Unable to open file";
-
-/*
-	struct timeval start, end;
-
-    long mtime, seconds, useconds;    
-
-    gettimeofday(&start, NULL);
-    usleep(2000);
-    gettimeofday(&end, NULL);
-
-    seconds  = end.tv_sec  - start.tv_sec;
-    useconds = end.tv_usec - start.tv_usec;
-
-    mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
-
-    printf("Elapsed time: %ld milliseconds\n", mtime);
-
-    return 0;
-//* /		
-		
-}
-
-
-/*
-int main()
-
-
-{
-
-    std::string filename;
-    std::cout << "please enter desired data file name: \n";
-    std::getline(std::cin, filename);
-
-	Time_Stamp(filename);
-
- 
-	std::clock_t    start; //Time elapsed since last goal
-	std::clock_t    Begin; //Time since session began
-	std::clock_t    t1; //
   
-
-	start = std::clock();
-	Begin = std::clock();
-	t1 = std::clock();
-
-
-	Gnuplot gp;
-	
-	std::string input;
-	char ch;
-	double x,y,X,Y,A,B;
-	float T, begin;
-	int total = -1;
-	X = Y = 0;
-	x = y = 0;
-	A = 0;
-	B = 0;
- 
-
-
-	std::cout << "press W, A, S, D to move UP, LEFT, DOWN and RIGHT" << std::endl;
-	std::cout << "press I, O, K, L to move DIAGONALLY UP LEFT, UP RIGHT, DOWN LEFT, DOWN RIGHT" << std::endl;
-	std::cout << "Press Q to quit" << std::endl;
-    
-    
-    	do
-    
-    	{
-        
-        		if(pow(double ((x-X)*(x-X) + (y-Y)*(y-Y)), (.5))<=1)
-        			
-        			{
-				total = total+1;
-				std::cout << "Goals Scored: " << total << std::endl;
-				float T = ((std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000));
-				float begin = ((std::clock() - Begin) / (double)(CLOCKS_PER_SEC / 1000));
-				Data_Write(filename, begin, T, x, y, X, Y, A, B);
-				std::cout << T << " , " << begin << std::endl;
-				X = ( rand() % (XMAX - XMIN));
-				Y = ( rand() % (YMAX - YMIN));
-				start = std::clock();
-		
-				}
-	
-			float T = ((std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000));
-			float begin = ((std::clock() - Begin) / (double)(CLOCKS_PER_SEC / 1000));
-			
-        		graph(gp, x, y, X, Y, A, B);
-        		
-        		Data_Write(filename, begin, T, x, y, X, Y, A, B);
-        		
-
-        		std::cin.get(ch);
-        
-        	switch(ch)
-        	
-        	{
-        	
-            	case '\n': break;
-            	case 'W':
-            	case 'w':
-                
-                	if(y<YMAX) A=x , B=y , y++;
-                	else
-                	{
-                		std::cout << "You can't move there!" << std::endl;
-                	}
-                	
-                	std::cout << "W was pressed" << std::endl;
-                	break;
-            
-            
-            	case 'A':
-            	case 'a':
-            	
-            		if(x>XMIN) A=x , B=y , x--;
-            		else 
-            		{	
-            			std::cout << "You can't move there!" << std::endl;
-            		}
-                
-                	std::cout << "A was pressed" << std::endl;
-                	break;
-                
-                
-            	case 's':
-            	case 'S':
-		
-			if(y>YMIN) A=x , B=y , y--;
-			else 
-			{	
-				std::cout << "You can't move there!" << std::endl;
-			}
-			
-                	std::cout << "S was pressed" << std::endl;
-                	break;
-                
-                
-            	case 'D':
-            	case 'd':
-            	
-            		if(x<XMAX) A=x , B=y , x++;
-            		else
-            		{	
-            			std::cout << "You can't move there!" << std::endl;
-            		}
-                
-                	std::cout << "D was pressed" << std::endl;
-                	break;
-                
-                
-            	case 'I':
-            	case 'i':
-            	
-            		if(y<YMAX && x>XMIN) A=x , B=y , y++, x--;
-                	else
-                	{	
-                		std::cout << "You can't move there!" << std::endl;
-                	}
-                
-                	std::cout << "I was pressed" << std::endl;
-                	break;
-                
-                
-            	case 'O':
-            	case 'o':
-            	
-            		if(y<YMAX && x<XMAX) A=x , B=y , y++, x++;
-                	else
-                	{	
-                		std::cout << "You can't move there!" << std::endl;
-                	}
-                	
-                	std::cout << "O was pressed" << std::endl;
-                	break;
-                
-                
-            	case 'K':
-            	case 'k':
-            	
-            		if(y>YMIN && x>XMIN) A=x , B=y , y--, x--;
-                	else
-                	{	
-             		   	std::cout << "You can't move there!" << std::endl;
-                	}
-                	
-                	std::cout << "K was pressed" << std::endl;
-                	break;
-                
-                
-            	case 'L':
-            	case 'l':
-            	
-            		if(y>YMIN && x<XMAX) A=x , B=y , y--, x++;
-                	else
-                	{	
-                		std::cout << "You can't move there!" << std::endl;
-                	}
-                
-                	std::cout << "L was pressed" << std::endl;
-                	break;
-
-
-        	}
-     	
-        
-
-	}
-	
-	while (ch != 'Q' && ch!='q');
-    
-
-	std::cout << "exiting program" << std::endl;
-	std::cout << "note: graph will remain displayed" << std::endl;
-	std::cout << "Total Time Played: " << (std::clock() - Begin) / (double)(CLOCKS_PER_SEC / 1000) << " seconds" << std::endl;
-	float Total_Time = (std::clock() - Begin) / (double)(CLOCKS_PER_SEC / 1000);
-	float T_Final = ((std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000));
-	Data_Write(filename, Total_Time, T_Final, x, y, X, Y, A, B);
-	
-	gp << "quit" << std::endl;
-	
-	std::cout << "program ended" << std::endl;
-
-	return 0;
-	
-	
 }
 
-*/

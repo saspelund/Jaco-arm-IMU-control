@@ -10,13 +10,14 @@
 #include <string.h> //  strerror
 #include <stdexcept> // for exception, runtime_error, out_of_range
 
+
 //#define ROBOT_IS_PLUGGED_IN true
 
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#include "include/yei_threespace_api4.h"
+#include "yei_threespace_api4.h"
 #include <fstream>
 
 //Kinova
@@ -79,42 +80,20 @@ int main(int argc, char ** argv)
 		
 	Xgoal = 0.1;
 	Ygoal = 0.5;
-	
-	struct timeval startOfProgramTime, startOfCurrentGoalTime;
-	gettimeofday(&startOfProgramTime, NULL);
-	
-   	
+   	graph ( gp, 0, 0, Xgoal, Ygoal, 0, 0);
    	
    	// Register signal and signal handler
    	signal(SIGINT, signal_handler);
-	
-	std::string ofilename;
-    std::cout << "please enter desired output data file name: \n";
-    std::getline(std::cin, ofilename);
-	std::ofstream outputFile ( ofilename , std::ios::app);
-	
-	if (outputFile.is_open())
-	{
-		outputFile << "GoalTime\tXcurrent\tYcurrent\tXvel\tYvel" << "\n";
-	}
-		
-	graph ( gp, 0, 0, Xgoal, Ygoal, 0, 0, outputFile, startOfProgramTime, startOfCurrentGoalTime);
-	
-	//Time_Stamp(ofilename);
-	
+
 	int result; //used for error checking
 	
 	//store the orientation values of the IMUs
 	//orientation orient[NUMBER_OF_IMUS];
 	
 	//Read in Matrix from a file or I guess we can just hard code it for now
-	std::string ifilename;
-    std::cout << "please enter name of file containing matrix: \n";
-    std::getline(std::cin, ifilename);
-	
 	double multMatrix[2][8];
 	
-	std::ifstream infile(ifilename);
+	std::ifstream infile("Sanders_matrix.txt");
 	
 	//double value;
 	for (int col = 0; col <8; col ++)
@@ -311,7 +290,7 @@ int main(int argc, char ** argv)
 	
 	for (int device_iter = 0; device_iter< NUMBER_OF_IMUS ; device_iter++)
 	{
-		result = setStreamingTiming(fd_, device_iter, 1000000/100, TSS_INFINITE_DURATION, 0); // (microseconds/second) / (cycles/second) = (microseconds/cycle)
+		result = setStreamingTiming(fd_, device_iter, 500000, TSS_INFINITE_DURATION, 0); // the function may take pointers  ?
 		if ( result < 0 ) 
 		{
 			printf ("Unable to set streaming timing for IMU #%d, error: %d\n", device_iter, result);
@@ -396,12 +375,8 @@ int main(int argc, char ** argv)
 	
 	
 	float xVel, zVel, magnitude;
-	xVel = zVel = magnitude = 1.0;
+	magnitude = 1.0;
 	
-	
-
-
-
 	// loop everything:
 	// get current position (takes ~3 milliseconds....) !
 	// graph the initial points (this can do the dist(goal,current) checking)
@@ -413,9 +388,8 @@ int main(int argc, char ** argv)
    	{
 		result = (*MyGetCartesianPosition)(data); //about 2ms
 		
-		//graph ( gp, Xcurrent, Ycurrent, Xgoal, Ygoal, Xdelta, Ydelta,outputFile, startOfProgramTime, startOfCurrentGoalTime);
-		graph ( gp, -1.0*data.Coordinates.X, data.Coordinates.Z, Xgoal, Ygoal, -0.0625*xVel/magnitude, 0.0625*zVel/magnitude,
-				outputFile, startOfProgramTime, startOfCurrentGoalTime);
+		//graph ( gp, Xcurrent, Ycurrent, Xgoal, Ygoal, Xdelta, Ydelta);
+		graph ( gp, -1.0*data.Coordinates.X, data.Coordinates.Z, Xgoal, Ygoal, -0.0625*xVel/magnitude, 0.0625*zVel/magnitude);
 		
 		
 		
@@ -430,17 +404,18 @@ int main(int argc, char ** argv)
 		}
 		
 		magnitude = sqrt(xVel*xVel + zVel*zVel);
+		printf("mag: %7.4f\t", magnitude);
 		if ( magnitude < .1)
 		{
 			pointToSend.Position.CartesianPosition.X = 0.0f; //these values are the result of the matrix
 			pointToSend.Position.CartesianPosition.Z = 0.0f;
-			//printf("xVel: %7.4f\tzVel: %7.4f but sending 0s\n", xVel, zVel);
+			printf("xVel: %7.4f\tzVel: %7.4f but sending 0s\n", xVel, zVel);
 		}
 		else
 		{
 			pointToSend.Position.CartesianPosition.X = xVel/magnitude*maxSpeed; // /640.0; //these values are the result of the matrix
 			pointToSend.Position.CartesianPosition.Z = zVel/magnitude*maxSpeed; // /384.0;
-			//printf("xVel: %7.4f\tzVel: %7.4f\n", xVel/magnitude*maxSpeed, zVel/magnitude*maxSpeed);
+			printf("xVel: %7.4f\tzVel: %7.4f\n", xVel/magnitude*maxSpeed, zVel/magnitude*maxSpeed);
 		}
 		
 		
@@ -462,7 +437,8 @@ int main(int argc, char ** argv)
 	printf ("Kinova API closed\n");
    	
    	
-   	pthread_join( readerThread, NULL);
+   	result = pthread_join( readerThread, NULL);
+   	printf ("pthread closed:%d\n",result);
    	
    	
    	//close everything down
@@ -480,7 +456,7 @@ int main(int argc, char ** argv)
 		if ( result < 0 ) 
 		{
 			printf ("Unable to get battery level of IMU #%d, error: %d\n", device_iter, result);
-			return 1;
+			//return 1;
 		}
 		printf ("battery level of IMU #%d = %d\n", device_iter, result);
 	}
@@ -493,7 +469,7 @@ int main(int argc, char ** argv)
 	printf ("Device closed. fd_: %d\n",fd_);
 	
 	
-	gp << "quit" << std::endl;
+	
 	
 	
 	printf ("Exiting program\n");
